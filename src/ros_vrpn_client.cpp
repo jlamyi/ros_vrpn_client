@@ -42,10 +42,7 @@
 #include <vrpn_Connection.h>
 #include <vrpn_Tracker.h> 
 
-// Daman
-//#include <LinearMath/btQuaternion.h>
 #include <tf/LinearMath/Quaternion.h>
-// /Daman
 
 void VRPN_CALLBACK track_target (void *, const vrpn_TRACKERCB t);
 
@@ -98,27 +95,17 @@ class Rigid_Body {
 //== Tracker Position/Orientation Callback ==--
 void VRPN_CALLBACK track_target (void *, const vrpn_TRACKERCB t)
 {
-    // Daman
-	//btQuaternion q_orig(t.quat[0], t.quat[1], t.quat[2], t.quat[3]);
 	tf::Quaternion q_orig(t.quat[0], t.quat[1], t.quat[2], t.quat[3]);
-    //btQuaternion q_fix(0.70710678, 0., 0., 0.70710678);
 	tf::Quaternion q_fix(0.70710678, 0., 0., 0.70710678);
-	// /Daman
 
     // optitrak <-- funky <-- object
     // the q_fix.inverse() esures that when optitrak_funky says 0 0 0
     // for roll pitch yaw, there is still a rotation that aligns the
     // object frame with the /optitrak frame (and not /optitrak_funky)
-    // Daman
-	//btQuaternion q_rot = q_fix * q_orig * q_fix.inverse();
 	tf::Quaternion q_rot = q_fix * q_orig * q_fix.inverse();
-	// /Daman
 
     //btScalar ang = q_rot.getAngle();
-    // Daman
-	//btVector3 axis = q_rot.getAxis();
 	tf::Vector3 axis = q_rot.getAxis();
-    //btVector3 pos(t.pos[0], -t.pos[2], t.pos[1]);
 	tf::Vector3 pos(t.pos[0], -t.pos[2], t.pos[1]);
     //btVector3 new_pos = pos.rotate(axis, ang);
 
@@ -135,9 +122,7 @@ void VRPN_CALLBACK track_target (void *, const vrpn_TRACKERCB t)
     prev_vrpn_data = t;
 
     target_state->target.transform.translation.x = pos.x();
-    //target_state->target.transform.translation.x = pos.y();
     target_state->target.transform.translation.y = pos.y();
-    //target_state->target.transform.translation.y = -pos.x();
     target_state->target.transform.translation.z = pos.z();
 
     target_state->target.transform.rotation.x = q_rot.x();
