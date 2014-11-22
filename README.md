@@ -12,8 +12,8 @@ Its aim is to support ros_vrpn_client on ROS Indigo.
 
 # Testing your connection
 
-1. Start a VRPN server. For example, you can use `vrpn_server` with a vrpn.cfg containing the line `vrpn_Tracker_NULL	Tracker0	1	60.0`
-2. Run `roslaunch ros_vrpn_client track.launch` to listen to Tracker0a@localhost
+1. Start a VRPN server. For example, you can use `vrpn_server` with the vrpn.cfg in the launch folder.
+2. Run `roslaunch ros_vrpn_client test.launch` to listen to Tracker0@localhost and open rviz to visualize the transformation.
 3. `rosrun tf view_frames && evince frames.pdf` should show Tracker0 with an update rate of 60 Hz
 
 # TF frames

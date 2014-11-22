@@ -1,0 +1,6 @@
+<launch>
+  <node pkg="ros_vrpn_client" name="Tracker0" output="screen" type="ros_vrpn_client" args="_vrpn_server_ip:=localhost" required="true" />
+
+  <node pkg="rviz" type="rviz" output="screen" name="rviz" args="-d $(find ros_vrpn_client)/launch/test.rviz" />
+
+</launch>
