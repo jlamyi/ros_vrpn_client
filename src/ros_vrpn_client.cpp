@@ -46,107 +46,71 @@
 
 void VRPN_CALLBACK track_target (void *, const vrpn_TRACKERCB t);
 
-class TargetState{
-    public:
-        geometry_msgs::TransformStamped target;
-};
-
-
-TargetState *target_state;
-std::string frame_id;
-
-// set to true in the VRPN callback function.
-bool fresh_data = false;
-vrpn_TRACKERCB prev_vrpn_data;
-
-
 class Rigid_Body {
     private:
-        ros::Publisher target_pub;
-        tf::TransformBroadcaster br;
-        vrpn_Connection *connection;
-        vrpn_Tracker_Remote *tracker;
+        ros::Publisher m_target_pub;
+        tf::TransformBroadcaster m_br;
+        vrpn_Connection* m_connection;
+        vrpn_Tracker_Remote* m_tracker;
+        geometry_msgs::TransformStamped m_target;
+        std::string m_frame_id;
 
     public:
-        Rigid_Body(ros::NodeHandle& nh, std::string server_ip,
-                   int port) 
+        Rigid_Body(
+            ros::NodeHandle& nh,
+            const std::string& server_ip,
+            int port,
+            const std::string& frame_id)
+            : m_frame_id(frame_id)
         {
-            target_pub = nh.advertise<geometry_msgs::TransformStamped>("pose", 100);
+            m_target_pub = nh.advertise<geometry_msgs::TransformStamped>("pose", 100);
             std::string connec_nm = server_ip + ":" + boost::lexical_cast<std::string>(port);
-            connection = vrpn_get_connection_by_name(connec_nm.c_str());
+            m_connection = vrpn_get_connection_by_name(connec_nm.c_str());
             std::string target_name = nh.getNamespace().substr(1);
-            tracker = new vrpn_Tracker_Remote(target_name.c_str(), connection);
-            this->tracker->register_change_handler(NULL, track_target);
+            m_tracker = new vrpn_Tracker_Remote(target_name.c_str(), m_connection);
+            m_tracker->register_change_handler(this, track_target);
         }
-
-        void publish_target_state(TargetState *target_state)
-        {
-            br.sendTransform(target_state->target);
-            target_pub.publish(target_state->target);
-        }    	
 
         void step_vrpn()
         {
-            this->tracker->mainloop();
-            this->connection->mainloop();
+            m_tracker->mainloop();
+            m_connection->mainloop();
+        }
+
+        void on_change(const vrpn_TRACKERCB t)
+        {
+            m_target.transform.translation.x = t.pos[0];
+            m_target.transform.translation.y = t.pos[1];
+            m_target.transform.translation.z = t.pos[2];
+
+            m_target.transform.rotation.x = t.quat[0];
+            m_target.transform.rotation.y = t.quat[1];
+            m_target.transform.rotation.z = t.quat[2];
+            m_target.transform.rotation.w = t.quat[3];
+
+            m_target.header.frame_id = "vrpn";
+            m_target.child_frame_id = m_frame_id;
+            m_target.header.stamp = ros::Time::now();
+
+            m_br.sendTransform(m_target);
+            m_target_pub.publish(m_target);
         }
 };
 
 //== Tracker Position/Orientation Callback ==--
-void VRPN_CALLBACK track_target (void *, const vrpn_TRACKERCB t)
+void VRPN_CALLBACK track_target (void * userData, const vrpn_TRACKERCB t)
 {
-	tf::Quaternion q_orig(t.quat[0], t.quat[1], t.quat[2], t.quat[3]);
-	tf::Quaternion q_fix(0.70710678, 0., 0., 0.70710678);
-
-    // optitrak <-- funky <-- object
-    // the q_fix.inverse() esures that when optitrak_funky says 0 0 0
-    // for roll pitch yaw, there is still a rotation that aligns the
-    // object frame with the /optitrak frame (and not /optitrak_funky)
-	tf::Quaternion q_rot = q_fix * q_orig * q_fix.inverse();
-
-    //btScalar ang = q_rot.getAngle();
-	tf::Vector3 axis = q_rot.getAxis();
-	tf::Vector3 pos(t.pos[0], -t.pos[2], t.pos[1]);
-    //btVector3 new_pos = pos.rotate(axis, ang);
-
-    // verifying that each callback indeed gives fresh data.
-    if ( prev_vrpn_data.quat[0] == t.quat[0] and \
-         prev_vrpn_data.quat[1] == t.quat[1] and \
-         prev_vrpn_data.quat[2] == t.quat[2] and \
-         prev_vrpn_data.quat[3] == t.quat[3] and \
-         prev_vrpn_data.pos[0] == t.pos[0] and \
-         prev_vrpn_data.pos[1] == t.pos[1] and \
-         prev_vrpn_data.pos[2] == t.pos[2] )
-        ROS_WARN("Repeated Values");
-
-    prev_vrpn_data = t;
-
-    target_state->target.transform.translation.x = pos.x();
-    target_state->target.transform.translation.y = pos.y();
-    target_state->target.transform.translation.z = pos.z();
-
-    target_state->target.transform.rotation.x = q_rot.x();
-    target_state->target.transform.rotation.y = q_rot.y();
-    target_state->target.transform.rotation.z = q_rot.z();
-    target_state->target.transform.rotation.w = q_rot.w();
-
-    target_state->target.header.frame_id = "optitrak";
-    target_state->target.child_frame_id = frame_id;
-    target_state->target.header.stamp = ros::Time::now();
-
-    fresh_data = true;
+    Rigid_Body* r = static_cast<Rigid_Body*>(userData);
+    r->on_change(t);
 }
-
 
 
 int main(int argc, char* argv[])
 {
-    ros::init(argc, argv, "vrpn_tracked_object_1");
+    ros::init(argc, argv, "ros_vrpn_client");
     ros::NodeHandle nh("~");
 
-    target_state = new TargetState;
-    //frame_id = nh.getNamespace().substr(1);
-    frame_id = nh.getNamespace();
+    std::string frame_id = nh.getNamespace();
 
     std::string vrpn_server_ip;
     int vrpn_port;
@@ -158,23 +122,17 @@ int main(int argc, char* argv[])
     std::cout<<"vrpn_server_ip:"<<vrpn_server_ip<<std::endl;
     std::cout<<"vrpn_port:"<<vrpn_port<<std::endl;
 
-    Rigid_Body tool(nh, vrpn_server_ip, vrpn_port);
+    Rigid_Body tool(nh, vrpn_server_ip, vrpn_port, frame_id);
 
-    ros::Rate loop_rate(1000);
+    ros::Rate loop_rate(10);
 
     while(ros::ok())
     {
         tool.step_vrpn();
-        //vrpn_SleepMsecs(10);
-        if (fresh_data == true)
-        { // only publish when receive data over VRPN.
-            tool.publish_target_state(target_state);
-            fresh_data = false;
-        }
-        //ros::spinOnce();
         loop_rate.sleep();
     }
-	return 0;
+
+    return 0;
 }
 
 

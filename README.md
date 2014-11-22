@@ -10,38 +10,17 @@ Its aim is to support ros_vrpn_client on ROS Indigo.
 3. Run `export VRPN_ROOT=/path/where/your/vrpn/is`
 4. Run `catkin_make`
 
-TF coord frames
-----------------
+# Testing your connection
 
-1. /optitrak 
-        - world frame that we will use.
-        - X axis is along the x axis of the clibration pattern.
-        - Z axis is vertically up.
+1. Start a VRPN server. For example, you can use `vrpn_server` with a vrpn.cfg containing the line `vrpn_Tracker_NULL	Tracker0	1	60.0`
+2. Run `roslaunch ros_vrpn_client track.launch` to listen to Tracker0a@localhost
+3. `rosrun tf view_frames && evince frames.pdf` should show Tracker0 with an update rate of 60 Hz
 
-2. Every tracked object has a coord frame whose TF name is the name of
-   the ros node (given from the launch file or command line).
+# TF frames
 
-   Hitting "Reset To Current Orientation" in the TrackingTools
-   software (Trackable properties) aligns the object coord frame with
-   the /optitrak frame.
+The layout is `vrpn/<name of your ros node>`.
 
-Running the code
-----------------
+# Notes
 
-1. Example to run node from command line:
-     ./bin/ros_vrpn_client __name:=torso_trackable _vrpn_server_ip:=192.168.2.110
-
-
-Coord frames vodoo
-------------------
-The TrackingTools software outputs the position and orientation in a
-funky coord frame which has the Y axis pointing vertically up, the X
-axis along the x axis of the calibration square and Z axis along the
--ve z axis of the calibration square.
-
-We perform some rotations to get rid of this funky frame and use the
-/optitrak frame described above as our fixed world coord frame. The
-code is in the "VRPN_CALLBACK track_target" function in
-ros_vrpn_client.cpp
-
-
+* Unlike the original package, this package does neither do any additional transformation nor has special handling for optitrack.
+* The original package had some latency (up to one second) between a received vrpn message and publishing the transformation. This limitation has been removed.

@@ -1,0 +1,3 @@
+<launch>
+  <node pkg="ros_vrpn_client" name="Tracker0" type="ros_vrpn_client" args="_vrpn_server_ip:=localhost" required="true" />
+</launch>
