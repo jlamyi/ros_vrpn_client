@@ -8,7 +8,6 @@ Panels:
         - /Status1
         - /Grid1
         - /TF1
-        - /TF1/Status1
         - /TF1/Frames1
       Splitter Ratio: 0.5
     Tree Height: 535
@@ -59,7 +58,7 @@ Visualization Manager:
         All Enabled: true
         Tracker0:
           Value: true
-        vrpn:
+        world:
           Value: true
       Marker Scale: 1
       Name: TF
@@ -67,7 +66,7 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        vrpn:
+        world:
           Tracker0:
             {}
       Update Interval: 0
@@ -75,7 +74,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: vrpn
+    Fixed Frame: world
     Frame Rate: 30
   Name: root
   Tools:

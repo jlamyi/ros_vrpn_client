@@ -1,4 +1,6 @@
 /*
+# Copyright (c) 2014, Automatic Coordination of Teams Laboratory (ACT-Lab), 
+#                     University of Souther California
 # Copyright (c) 2011, Georgia Tech Research Corporation
 # All rights reserved.
 # 
@@ -25,13 +27,10 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+## author Wolfgang Hoenig (ACT-Lab, USC)
 ## author Advait Jain (Healthcare Robotics Lab, Georgia Tech.)
 ## author Chih-Hung Aaron King (Healthcare Robotics Lab, Georgia Tech.)
 */
-
-//== This application listens for a rigid body named 'Tracker' on a remote machine
-//== and publishes & tf it's position and orientation through ROS.
-
 
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
@@ -44,31 +43,36 @@
 
 #include <tf/LinearMath/Quaternion.h>
 
-void VRPN_CALLBACK track_target (void *, const vrpn_TRACKERCB t);
+void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB);
 
-class Rigid_Body {
-    private:
-        ros::Publisher m_target_pub;
-        tf::TransformBroadcaster m_br;
-        vrpn_Connection* m_connection;
-        vrpn_Tracker_Remote* m_tracker;
-        geometry_msgs::TransformStamped m_target;
-        std::string m_frame_id;
-
+class RigidBody {
     public:
-        Rigid_Body(
+        RigidBody(
             ros::NodeHandle& nh,
-            const std::string& server_ip,
+            const std::string& ip,
             int port,
-            const std::string& frame_id)
-            : m_frame_id(frame_id)
+            const std::string& frame_id,
+            const std::string& child_frame_id)
+            : m_br()
+            , m_connection()
+            , m_tracker()
+            , m_target()
         {
-            m_target_pub = nh.advertise<geometry_msgs::TransformStamped>("pose", 100);
-            std::string connec_nm = server_ip + ":" + boost::lexical_cast<std::string>(port);
+            std::string connec_nm = ip + ":" + boost::lexical_cast<std::string>(port);
             m_connection = vrpn_get_connection_by_name(connec_nm.c_str());
-            std::string target_name = nh.getNamespace().substr(1);
-            m_tracker = new vrpn_Tracker_Remote(target_name.c_str(), m_connection);
+
+            // child_frame_id is the same as remote object name
+            m_tracker = new vrpn_Tracker_Remote(child_frame_id.c_str(), m_connection);
             m_tracker->register_change_handler(this, track_target);
+
+            m_target.header.frame_id = frame_id;
+            m_target.child_frame_id = child_frame_id;
+        }
+
+        ~RigidBody()
+        {
+            // There is no way to close the connection in VRPN.
+            // Leak both m_tracker and m_connection to avoid crashes on shutdown.
         }
 
         void step_vrpn()
@@ -76,6 +80,9 @@ class Rigid_Body {
             m_tracker->mainloop();
             m_connection->mainloop();
         }
+
+    private:
+        friend void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB);
 
         void on_change(const vrpn_TRACKERCB t)
         {
@@ -88,47 +95,46 @@ class Rigid_Body {
             m_target.transform.rotation.z = t.quat[2];
             m_target.transform.rotation.w = t.quat[3];
 
-            m_target.header.frame_id = "vrpn";
-            m_target.child_frame_id = m_frame_id;
             m_target.header.stamp = ros::Time::now();
 
             m_br.sendTransform(m_target);
-            m_target_pub.publish(m_target);
         }
+
+    private:
+        tf::TransformBroadcaster m_br;
+        vrpn_Connection* m_connection;
+        vrpn_Tracker_Remote* m_tracker;
+        geometry_msgs::TransformStamped m_target;
 };
 
-//== Tracker Position/Orientation Callback ==--
-void VRPN_CALLBACK track_target (void * userData, const vrpn_TRACKERCB t)
+void VRPN_CALLBACK track_target(void* userData, const vrpn_TRACKERCB t)
 {
-    Rigid_Body* r = static_cast<Rigid_Body*>(userData);
+    RigidBody* r = static_cast<RigidBody*>(userData);
     r->on_change(t);
 }
-
 
 int main(int argc, char* argv[])
 {
     ros::init(argc, argv, "ros_vrpn_client");
     ros::NodeHandle nh("~");
 
-    std::string frame_id = nh.getNamespace();
+    std::string ip;
+    int port;
+    std::string frame_id;
+    std::string child_frame_id;
 
-    std::string vrpn_server_ip;
-    int vrpn_port;
-    std::string tracked_object_name;
+    nh.param<std::string>("ip", ip, "localhost");
+    nh.param<int>("port", port, 3883);
+    nh.param<std::string>("frame_id", frame_id, "world");
+    nh.param<std::string>("child_frame_id", child_frame_id, "Tracker0");
 
-    nh.param<std::string>("vrpn_server_ip", vrpn_server_ip, std::string());
-    nh.param<int>("vrpn_port", vrpn_port, 3883);
-
-    std::cout<<"vrpn_server_ip:"<<vrpn_server_ip<<std::endl;
-    std::cout<<"vrpn_port:"<<vrpn_port<<std::endl;
-
-    Rigid_Body tool(nh, vrpn_server_ip, vrpn_port, frame_id);
+    RigidBody body(nh, ip, port, frame_id, child_frame_id);
 
     ros::Rate loop_rate(10);
 
     while(ros::ok())
     {
-        tool.step_vrpn();
+        body.step_vrpn();
         loop_rate.sleep();
     }
 

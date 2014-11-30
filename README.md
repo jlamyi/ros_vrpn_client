@@ -14,11 +14,16 @@ Its aim is to support ros_vrpn_client on ROS Indigo.
 
 1. Start a VRPN server. For example, you can use `vrpn_server` with the vrpn.cfg in the launch folder.
 2. Run `roslaunch ros_vrpn_client test.launch` to listen to Tracker0@localhost and open rviz to visualize the transformation.
-3. `rosrun tf view_frames && evince frames.pdf` should show Tracker0 with an update rate of 60 Hz
+3. `rosrun tf view_frames && evince frames.pdf` should show Tracker0 with an update rate of 60 Hz, similar to the following image:
 
-# TF frames
+![Output of view_frames](frames.svg)
 
-The layout is `vrpn/<name of your ros node>`.
+# Parameters:
+
+* `ip`: The IP address or hostname of your VRPN server. [Default: `localhost`]
+* `port`: The port number of your VRPN server. [Default: `3883`]
+* `frame_id`: The parent of your transformation. [Default: `world`]
+* `child_frame_id`: The name of your tracker object and the name of your new tf frame. [Default: `Tracker0`]
 
 # Notes
 
