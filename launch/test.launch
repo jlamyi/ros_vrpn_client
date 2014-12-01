@@ -11,6 +11,9 @@
   <arg name="yaw" default="0" />
   <arg name="pitch" default="0" />
   <arg name="roll" default="0" />
+  <arg name="sx" default="1" />
+  <arg name="sy" default="1" />
+  <arg name="sz" default="1" />
 
   <node pkg="ros_vrpn_client" name="Tracker0" output="screen" type="ros_vrpn_client" required="true">
     <param name="ip" value="$(arg ip)" />
@@ -23,6 +26,9 @@
     <param name="yaw" value="$(arg yaw)" />
     <param name="pitch" value="$(arg pitch)" />
     <param name="roll" value="$(arg roll)" />
+    <param name="sx" value="$(arg sx)" />
+    <param name="sy" value="$(arg sy)" />
+    <param name="sz" value="$(arg sz)" />
   </node>
 
   <node pkg="rviz" type="rviz" output="screen" name="rviz" args="-d $(find ros_vrpn_client)/launch/test.rviz" />
