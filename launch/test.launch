@@ -5,12 +5,24 @@
   <arg name="port" default="3883" />
   <arg name="frame_id" default="world" />
   <arg name="child_frame_id" default="Tracker0" /> <!-- Also matches tracker name -->
+  <arg name="x" default="0" />
+  <arg name="y" default="0" />
+  <arg name="z" default="0" />
+  <arg name="yaw" default="0" />
+  <arg name="pitch" default="0" />
+  <arg name="roll" default="0" />
 
   <node pkg="ros_vrpn_client" name="Tracker0" output="screen" type="ros_vrpn_client" required="true">
     <param name="ip" value="$(arg ip)" />
     <param name="port" value="$(arg port)" />
     <param name="frame_id" value="$(arg frame_id)" />
     <param name="child_frame_id" value="$(arg child_frame_id)" />
+    <param name="x" value="$(arg x)" />
+    <param name="y" value="$(arg y)" />
+    <param name="z" value="$(arg z)" />
+    <param name="yaw" value="$(arg yaw)" />
+    <param name="pitch" value="$(arg pitch)" />
+    <param name="roll" value="$(arg roll)" />
   </node>
 
   <node pkg="rviz" type="rviz" output="screen" name="rviz" args="-d $(find ros_vrpn_client)/launch/test.rviz" />

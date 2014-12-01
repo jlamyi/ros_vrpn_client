@@ -52,11 +52,13 @@ class RigidBody {
             const std::string& ip,
             int port,
             const std::string& frame_id,
-            const std::string& child_frame_id)
+            const std::string& child_frame_id,
+            const tf::Transform& transform)
             : m_br()
             , m_connection()
             , m_tracker()
             , m_target()
+            , m_transform(transform)
         {
             std::string connec_nm = ip + ":" + boost::lexical_cast<std::string>(port);
             m_connection = vrpn_get_connection_by_name(connec_nm.c_str());
@@ -86,14 +88,18 @@ class RigidBody {
 
         void on_change(const vrpn_TRACKERCB t)
         {
-            m_target.transform.translation.x = t.pos[0];
-            m_target.transform.translation.y = t.pos[1];
-            m_target.transform.translation.z = t.pos[2];
+            tf::Vector3 pos(t.pos[0], t.pos[1], t.pos[2]);
+            pos = m_transform(pos);
+            m_target.transform.translation.x = pos.x();
+            m_target.transform.translation.y = pos.y();
+            m_target.transform.translation.z = pos.z();
 
-            m_target.transform.rotation.x = t.quat[0];
-            m_target.transform.rotation.y = t.quat[1];
-            m_target.transform.rotation.z = t.quat[2];
-            m_target.transform.rotation.w = t.quat[3];
+            tf::Quaternion quat(t.quat[0], t.quat[1], t.quat[2], t.quat[3]);
+            quat = m_transform * quat;
+            m_target.transform.rotation.x = quat.x();
+            m_target.transform.rotation.y = quat.y();
+            m_target.transform.rotation.z = quat.z();
+            m_target.transform.rotation.w = quat.w();
 
             m_target.header.stamp = ros::Time::now();
 
@@ -105,6 +111,7 @@ class RigidBody {
         vrpn_Connection* m_connection;
         vrpn_Tracker_Remote* m_tracker;
         geometry_msgs::TransformStamped m_target;
+        tf::Transform m_transform;
 };
 
 void VRPN_CALLBACK track_target(void* userData, const vrpn_TRACKERCB t)
@@ -122,13 +129,21 @@ int main(int argc, char* argv[])
     int port;
     std::string frame_id;
     std::string child_frame_id;
+    double x, y, z, yaw, pitch, roll;
 
     nh.param<std::string>("ip", ip, "localhost");
     nh.param<int>("port", port, 3883);
     nh.param<std::string>("frame_id", frame_id, "world");
     nh.param<std::string>("child_frame_id", child_frame_id, "Tracker0");
+    nh.param<double>("x", x, 0);
+    nh.param<double>("y", y, 0);
+    nh.param<double>("z", z, 0);
+    nh.param<double>("yaw", yaw, 0);
+    nh.param<double>("pitch", pitch, 0);
+    nh.param<double>("roll", roll, 0);
 
-    RigidBody body(nh, ip, port, frame_id, child_frame_id);
+    tf::Transform transform(tf::createQuaternionFromRPY(roll, pitch, yaw), tf::Vector3(x, y, z));
+    RigidBody body(nh, ip, port, frame_id, child_frame_id, transform);
 
     ros::Rate loop_rate(10);
 

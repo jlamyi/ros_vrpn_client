@@ -24,6 +24,7 @@ Its aim is to support ros_vrpn_client on ROS Indigo.
 * `port`: The port number of your VRPN server. [Default: `3883`]
 * `frame_id`: The parent of your transformation. [Default: `world`]
 * `child_frame_id`: The name of your tracker object and the name of your new tf frame. [Default: `Tracker0`]
+* `x, y, z, yaw, pitch, roll`: Additional coordinate transformation. [Default: `0, 0, 0, 0, 0, 0`]
 
 # Notes
 
