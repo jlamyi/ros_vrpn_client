@@ -22,4 +22,7 @@ add_executable(ros_vrpn_client
   $ENV{VRPN_ROOT}/vrpn_Serial.C
 )
 
+add_executable(marker src/marker.cpp)
+
 target_link_libraries(ros_vrpn_client ${catkin_LIBRARIES})
+target_link_libraries(marker ${catkin_LIBRARIES})
